@@ -8,22 +8,39 @@ export async function POST() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { data: zonas } = await supabase.from('zonas').select('id, cuc').limit(1);
+    let zonaId: string;
+
+    const { data: zonas } = await supabase.from('zonas').select('id').limit(1);
+
     if (!zonas || zonas.length === 0) {
-      return NextResponse.json(
-        { error: 'No hay zonas en la base de datos. Ejecutar la migracion SQL primero.' },
-        { status: 400 }
-      );
+      const { data: newZona, error: zonaError } = await supabase
+        .from('zonas')
+        .insert({
+          cuc: 'Z001',
+          nombre_calle: 'Calle Florida - 100 al 199',
+          numero_desde: 100,
+          numero_hasta: 199,
+          capacidad: 15,
+        })
+        .select('id')
+        .single();
+
+      if (zonaError) {
+        return NextResponse.json(
+          { error: 'Error creando zona: ' + zonaError.message + '. ¿Corriste la migración SQL en Supabase?' },
+          { status: 500 }
+        );
+      }
+      zonaId = newZona.id;
+    } else {
+      zonaId = zonas[0].id;
     }
 
-    const zonaId = zonas[0].id;
-
-    // Check if P001 already exists
     const { data: existing } = await supabase
       .from('permisionarios')
       .select('*')
       .eq('legajo', 'P001')
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({
@@ -46,44 +63,28 @@ export async function POST() {
       return NextResponse.json({ error: permError.message }, { status: 500 });
     }
 
-    // Check if demo user exists
     const { data: existingUser } = await supabase
       .from('usuarios_wa')
       .select('*')
       .eq('numero_telefono', '5493875555123')
-      .single();
-
-    let usuario = existingUser;
+      .maybeSingle();
 
     if (!existingUser) {
-      const { data: newUser } = await supabase
-        .from('usuarios_wa')
-        .insert({
-          numero_telefono: '5493875555123',
-          nombre: 'Conductor Demo',
-          saldo_billetera: 10000,
-        })
-        .select()
-        .single();
-
-      usuario = newUser;
+      await supabase.from('usuarios_wa').insert({
+        numero_telefono: '5493875555123',
+        nombre: 'Conductor Demo',
+        saldo_billetera: 10000,
+      });
     }
 
     return NextResponse.json({
       permisionario,
-      usuario,
-      credentials: {
-        legajo: 'P001',
-        telefono: '5493875555123',
-        saldo_billetera: 10000,
-      },
+      credentials: { legajo: 'P001', telefono: '5493875555123' },
       message: 'Datos de demo creados. Usar legajo P001 para ingresar al panel.',
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Error creando seed data' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -95,10 +96,10 @@ export async function GET() {
       .from('permisionarios')
       .select('*')
       .eq('legajo', 'P001')
-      .single();
+      .maybeSingle();
 
     if (permisionario) {
-      return NextResponse.json({ exists: true, legajo: 'P001', permisionario });
+      return NextResponse.json({ exists: true, legajo: 'P001' });
     }
 
     return NextResponse.json({ exists: false, legajo: 'P001' });
