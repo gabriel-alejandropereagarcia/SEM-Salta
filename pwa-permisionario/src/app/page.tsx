@@ -64,7 +64,8 @@ const CREDENTIALS = {
 export default function HomePage() {
   const [activeFlow, setActiveFlow] = useState<string>('estacionar');
   const [stepIndex, setStepIndex] = useState(0);
-  const [showSeedInfo, setShowSeedInfo] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'creating' | 'done'>('idle');
+  const [seedExists, setSeedExists] = useState(false);
 
   const currentFlow = FLOWS.find((f) => f.id === activeFlow)!;
   const visibleSteps = currentFlow.steps.slice(0, stepIndex + 1);
@@ -351,23 +352,60 @@ export default function HomePage() {
 
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
               <h3 className="font-bold text-lg mb-4">🔑 Credenciales de prueba</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
-                  <span className="text-blue-200">PWA Legajo</span>
-                  <span className="font-mono font-bold">P001</span>
+              
+              {seedExists || seedStatus === 'done' ? (
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
+                    <span className="text-blue-200">PWA Legajo</span>
+                    <span className="font-mono font-bold">P001</span>
+                  </div>
+                  <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
+                    <span className="text-blue-200">WhatsApp (test)</span>
+                    <span className="font-mono font-bold">5493875555123</span>
+                  </div>
+                  <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-4 py-2 text-center text-emerald-200 text-xs">
+                    ✅ Datos de prueba creados
+                  </div>
                 </div>
-                <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
-                  <span className="text-blue-200">WhatsApp (test)</span>
-                  <span className="font-mono font-bold">5493875555123</span>
+              ) : seedStatus === 'creating' ? (
+                <div className="bg-white/10 rounded-xl px-4 py-3 text-center text-sm mb-4">
+                  <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full mx-auto mb-2" />
+                  Creando datos de prueba...
                 </div>
-              </div>
-              <p className="text-xs text-blue-200 mt-3 mb-4">Usá estas credenciales para probar el panel del permisionario</p>
+              ) : (
+                <p className="text-blue-200 text-sm mb-4">Primero creá los datos de prueba para poder ingresar al panel.</p>
+              )}
+
               <div className="flex gap-3">
+                {(!seedExists && seedStatus !== 'done') && (
+                  <button
+                    onClick={async () => {
+                      setSeedStatus('creating');
+                      try {
+                        const res = await fetch('/api/seed', { method: 'POST' });
+                        const data = await res.json();
+                        if (res.ok) {
+                          setSeedStatus('done');
+                          setSeedExists(true);
+                        } else {
+                          alert('Error: ' + (data.error || 'No se pudieron crear los datos. Verificá que Supabase esté configurado.'));
+                          setSeedStatus('idle');
+                        }
+                      } catch {
+                        alert('Error de conexion. Asegurate de configurar las variables de entorno de Supabase.');
+                        setSeedStatus('idle');
+                      }
+                    }}
+                    className="bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-blue-50 transition flex-1 text-center"
+                  >
+                    Crear datos demo
+                  </button>
+                )}
                 <a href="/dashboard" className="bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-blue-50 transition flex-1 text-center">
                   Ir al Dashboard
                 </a>
                 <a href="/cuenta-corriente" className="bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl text-sm hover:bg-blue-400 border border-blue-400 transition flex-1 text-center">
-                  Cuenta Corriente
+                  Cuenta
                 </a>
               </div>
             </div>

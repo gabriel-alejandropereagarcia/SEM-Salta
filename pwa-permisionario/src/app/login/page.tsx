@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePermisionario } from '@/hooks/usePermisionario';
 
 export default function LoginPage() {
@@ -8,6 +8,41 @@ export default function LoginPage() {
   const [legajo, setLegajo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'creating' | 'done'>('idle');
+  const [seedExists, setSeedExists] = useState(false);
+
+  useEffect(() => {
+    checkSeed();
+  }, []);
+
+  async function checkSeed() {
+    try {
+      const res = await fetch('/api/seed');
+      const data = await res.json();
+      setSeedExists(data.exists === true);
+    } catch {
+      setSeedExists(false);
+    }
+  }
+
+  async function createSeed() {
+    setSeedStatus('creating');
+    try {
+      const res = await fetch('/api/seed', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSeedStatus('done');
+        setSeedExists(true);
+        setLegajo('P001');
+      } else {
+        setError(data.error || 'Error creando datos de demo');
+        setSeedStatus('idle');
+      }
+    } catch {
+      setError('Error de conexion con el servidor');
+      setSeedStatus('idle');
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +54,7 @@ export default function LoginPage() {
     const success = await login(legajo.trim());
 
     if (!success) {
-      setError('Legajo no encontrado. Verifica el número.');
+      setError('Legajo no encontrado. Crea los datos de prueba primero.');
     } else {
       window.location.href = '/dashboard';
     }
@@ -35,7 +70,7 @@ export default function LoginPage() {
             🅿️
           </div>
           <h1 className="text-3xl font-extrabold text-white mb-1">SEM Salta</h1>
-          <p className="text-blue-200">Panel de Permisionario</p>
+          <p className="text-blue-200 text-sm">Panel de Permisionario</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -80,16 +115,46 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Seed / Demo Data Section */}
           <div className="mt-5 pt-5 border-t border-slate-100">
-            <p className="text-xs text-slate-400 text-center mb-2">Credenciales de prueba</p>
-            <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Legajo</span>
-                <span className="font-mono font-bold text-slate-700">P001</span>
+            <p className="text-xs text-slate-400 text-center mb-3">Datos de prueba</p>
+
+            {seedStatus === 'done' || seedExists ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm">
+                <p className="text-emerald-800 font-semibold mb-1">✅ Datos de prueba listos</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Legajo</span>
+                    <span className="font-mono font-bold text-slate-700">P001</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Nombre</span>
+                    <span className="text-slate-700">Juan Garcia</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : seedStatus === 'creating' ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700 text-center">
+                <svg className="animate-spin w-5 h-5 mx-auto mb-1" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Creando datos de prueba...
+              </div>
+            ) : (
+              <button
+                onClick={createSeed}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-4 rounded-xl text-sm font-medium transition border border-slate-200"
+              >
+                Crear datos de demo
+              </button>
+            )}
           </div>
         </div>
+
+        <p className="text-center text-blue-200 text-xs mt-4">
+          PunaTech 2026 — SEM Salta Digital
+        </p>
       </div>
     </div>
   );
