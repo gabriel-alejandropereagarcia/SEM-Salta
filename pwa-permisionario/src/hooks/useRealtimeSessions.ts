@@ -21,7 +21,7 @@ export function useRealtimeSessions({ zonaId, onInsert, onUpdate }: UseRealtimeS
       .from('sesiones_estacionamiento')
       .select('*')
       .eq('id_zona', zonaId)
-      .eq('estado', 'activo')
+      .in('estado', ['activo', 'pendiente_cobro'])
       .order('hora_inicio', { ascending: false });
 
     if (!error && data) {
@@ -49,7 +49,7 @@ export function useRealtimeSessions({ zonaId, onInsert, onUpdate }: UseRealtimeS
         },
         (payload) => {
           const newSession = payload.new as SesionEstacionamiento;
-          if (newSession.estado === 'activo') {
+          if (newSession.estado === 'activo' || newSession.estado === 'pendiente_cobro') {
             setSessions((prev) => [newSession, ...prev]);
             onInsert?.(newSession);
           }

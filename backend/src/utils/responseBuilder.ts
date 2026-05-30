@@ -1,11 +1,27 @@
 import { SesionEstacionamiento, FareResult } from '../types';
 import { obtenerTarifas } from '../services/fare.service';
 
-export function formatEstacionarSuccess(sesion: SesionEstacionamiento, cuc: string): string {
+export function formatEstacionarSuccess(sesion: SesionEstacionamiento, cuc: string, sinSaldo?: boolean): string {
   const horaInicio = new Date(sesion.hora_inicio);
   const horaFin = new Date(sesion.hora_fin!);
   const horaInicioStr = horaInicio.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   const horaFinStr = horaFin.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  const tipoEmoji = sesion.tipo_vehiculo === 'moto' ? '🏍' : '🚗';
+  const tarifa = sesion.tipo_vehiculo === 'moto' ? 300 : 700;
+
+  if (sinSaldo) {
+    return [
+      `✅ *Estacionamiento iniciado (efectivo)*`,
+      `${tipoEmoji} Patente: ${sesion.patente}`,
+      `📍 Zona: ${cuc}`,
+      `🕐 ${horaInicioStr} → ${horaFinStr}`,
+      `💵 Pago en efectivo - $${tarifa}/h`,
+      ``,
+      `El permisionario registrará tu cobro.`,
+      `Escribí *FIN* cuando quieras terminar.`,
+    ].join('\n');
+  }
+
   return [
     `✅ *Estacionamiento iniciado*`,
     `🚗 Patente: ${sesion.patente}`,
@@ -17,17 +33,29 @@ export function formatEstacionarSuccess(sesion: SesionEstacionamiento, cuc: stri
   ].join('\n');
 }
 
-export function formatFinSuccess(sesion: SesionEstacionamiento, fareInfo: FareResult, saldoRestante: number): string {
+export function formatFinSuccess(sesion: SesionEstacionamiento, fareInfo: FareResult, esEfectivo?: boolean): string {
   const duracion = fareInfo.horas > 0
     ? `${fareInfo.horas}h ${fareInfo.minutosExcedentes}min`
     : `< 1h`;
+
+  if (esEfectivo) {
+    return [
+      `🏁 *Estacionamiento finalizado*`,
+      `🚗 Patente: ${sesion.patente}`,
+      `⏱ Duración: ${duracion}`,
+      `💰 Costo: $${fareInfo.costoFinal} (efectivo)`,
+      `💵 Pagá al permisionario al retirar.`,
+      ``,
+      `¡Gracias por usar SEM Digital! 🙏`,
+    ].join('\n');
+  }
 
   return [
     `🏁 *Estacionamiento finalizado*`,
     `🚗 Patente: ${sesion.patente}`,
     `⏱ Duración: ${duracion}`,
     `💰 Costo: $${fareInfo.costoFinal}`,
-    `📄 Saldo restante: $${saldoRestante}`,
+    `📄 Se descontó de tu billetera`,
     ``,
     `¡Gracias por usar SEM Digital! 🙏`,
   ].join('\n');
@@ -128,10 +156,12 @@ export function formatActiveSession(sesion: SesionEstacionamiento, cuc: string):
     minute: '2-digit',
   });
   const tipoEmoji = sesion.tipo_vehiculo === 'moto' ? '🏍' : '🚗';
+  const pendiente = sesion.estado === 'pendiente_cobro' ? ' ⚠️ PENDIENTE DE COBRO' : '';
+  const pago = sesion.metodo_pago === 'digital' ? '📱 Digital' : '💵 Efectivo';
   return [
-    `📋 *Sesión activa*`,
+    `📋 *Sesión activa*${pendiente}`,
     `${tipoEmoji} ${sesion.patente} en zona ${cuc}`,
     `🕐 ${horaInicio} → ${horaFin}`,
-    `📱 ${sesion.metodo_pago === 'digital' ? 'Digital' : 'Efectivo'}`,
+    pago,
   ].join('\n');
 }

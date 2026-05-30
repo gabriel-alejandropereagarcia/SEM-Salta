@@ -7,9 +7,11 @@ interface SessionListProps {
   sessions: SesionEstacionamiento[];
   loading: boolean;
   capacidadMaxima: number;
+  onConfirmarCobro?: (sesionId: string) => void;
+  confirmando?: string | null;
 }
 
-export function SessionList({ sessions, loading, capacidadMaxima }: SessionListProps) {
+export function SessionList({ sessions, loading, capacidadMaxima, onConfirmarCobro, confirmando }: SessionListProps) {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -38,7 +40,12 @@ export function SessionList({ sessions, loading, capacidadMaxima }: SessionListP
       ) : (
         <div className="space-y-2">
           {sessions.map((session) => (
-            <SessionCard key={session.id} session={session} />
+            <SessionCard
+              key={session.id}
+              session={session}
+              onConfirmarCobro={onConfirmarCobro}
+              confirmando={confirmando}
+            />
           ))}
         </div>
       )}

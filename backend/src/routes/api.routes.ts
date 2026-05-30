@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../config/supabase';
+import { confirmarCobroEfectivo } from '../services/parking.service';
 
 const router = Router();
 
@@ -121,6 +122,23 @@ router.post('/permisionarios/:id/pago-efectivo', async (req: Request, res: Respo
     }
 
     const result = await registrarPagoEfectivo(id, permisionario.id_zona_actual, patente, tipoVehiculo);
+
+    if (result.error) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+
+    res.json(result.sesion);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+router.post('/permisionarios/:id/confirmar-cobro/:sesionId', async (req: Request, res: Response) => {
+  try {
+    const { id, sesionId } = req.params;
+
+    const result = await confirmarCobroEfectivo(id, sesionId);
 
     if (result.error) {
       res.status(400).json({ error: result.error });

@@ -27,10 +27,10 @@ export async function iniciarSesion(
   cuc: string,
   patente: string,
   tipoVehiculo?: TipoVehiculo
-): Promise<{ sesion: SesionEstacionamiento; error?: string }> {
+): Promise<{ sesion: SesionEstacionamiento; sinSaldo?: boolean; saldoInsuficiente?: number; costoMinimo?: number }> {
   const patenteUpper = patente.toUpperCase();
   if (!validarPatente(patenteUpper)) {
-    return { sesion: null!, error: '❌ Patente inválida. Formato: ABC123 o AB123CD' };
+    return { sesion: null!, sinSaldo: false, saldoInsuficiente: 0, costoMinimo: 0 };
   }
 
   const tipo = tipoVehiculo || inferirTipoVehiculo(patenteUpper);
@@ -42,28 +42,28 @@ export async function iniciarSesion(
     .single();
 
   if (!zona) {
-    return { sesion: null!, error: `❌ No se encontró la zona con CUC "${cuc}". Verificá el código.` };
+    return { sesion: null!, sinSaldo: false, saldoInsuficiente: 0, costoMinimo: 0 };
   }
 
   const { data: sesionesActivas } = await supabase
     .from('sesiones_estacionamiento')
     .select('*')
     .eq('id_zona', zona.id)
-    .eq('estado', 'activo');
+    .in('estado', ['activo', 'pendiente_cobro']);
 
   if (sesionesActivas && sesionesActivas.length >= zona.capacidad) {
-    return { sesion: null!, error: `❌ La zona ${cuc} está llena (${zona.capacidad}/${zona.capacidad} lugares).` };
+    return { sesion: null!, sinSaldo: false, saldoInsuficiente: 0, costoMinimo: 0 };
   }
 
   const { data: sesionActiva } = await supabase
     .from('sesiones_estacionamiento')
     .select('*')
     .eq('id_usuario_wa', userId)
-    .eq('estado', 'activo')
+    .in('estado', ['activo', 'pendiente_cobro'])
     .single();
 
   if (sesionActiva) {
-    return { sesion: null!, error: '❌ Ya tenés una sesión activa. Usá FIN para finalizarla primero.' };
+    return { sesion: null!, sinSaldo: false, saldoInsuficiente: 0, costoMinimo: 0 };
   }
 
   const { data: usuario } = await supabase
@@ -73,16 +73,13 @@ export async function iniciarSesion(
     .single();
 
   if (!usuario) {
-    return { sesion: null!, error: '❌ Usuario no encontrado.' };
+    return { sesion: null!, sinSaldo: false, saldoInsuficiente: 0, costoMinimo: 0 };
   }
 
   const costoMinimo = calcularCostoMinimo(tipo);
-  if (usuario.saldo_billetera < costoMinimo) {
-    return {
-      sesion: null!,
-      error: `❌ Saldo insuficiente. Necesitás $${costoMinimo} (1h ${tipo}) y tenés $${usuario.saldo_billetera}. Recargá con RECARGAR.`,
-    };
-  }
+  const saldoInsuficiente = usuario.saldo_billetera < costoMinimo;
+  const metodoPago: 'digital' | 'efectivo' = saldoInsuficiente ? 'efectivo' : 'digital';
+  const estado: 'activo' | 'pendiente_cobro' = saldoInsuficiente ? 'pendiente_cobro' : 'activo';
 
   const horaInicio = new Date();
   const horaFin = new Date(horaInicio.getTime() + 60 * 60 * 1000);
@@ -105,28 +102,35 @@ export async function iniciarSesion(
       tipo_vehiculo: tipo,
       hora_inicio: horaInicio.toISOString(),
       hora_fin: horaFin.toISOString(),
-      estado: 'activo',
-      metodo_pago: 'digital',
+      estado,
+      metodo_pago: metodoPago,
     })
     .select()
     .single();
 
   if (error) throw new Error(`Error creando sesión: ${error.message}`);
 
-  return { sesion: sesion as SesionEstacionamiento };
+  return { sesion: sesion as SesionEstacionamiento, sinSaldo: saldoInsuficiente, saldoInsuficiente: usuario.saldo_billetera, costoMinimo };
 }
 
-export async function finalizarSesion(userId: string): Promise<{ sesion: SesionEstacionamiento; fareInfo: ReturnType<typeof calcularCostoEstacionamiento>; error?: string }> {
+export async function finalizarSesion(userId: string): Promise<{
+  sesion: SesionEstacionamiento;
+  fareInfo: ReturnType<typeof calcularCostoEstacionamiento>;
+  esEfectivo?: boolean;
+  error?: string;
+}> {
   const { data: sesion } = await supabase
     .from('sesiones_estacionamiento')
     .select('*')
+    .in('estado', ['activo', 'pendiente_cobro'])
     .eq('id_usuario_wa', userId)
-    .eq('estado', 'activo')
     .single();
 
   if (!sesion) {
     return { sesion: null!, fareInfo: null!, error: '❌ No tenés una sesión activa.' };
   }
+
+  const esEfectivo = sesion.metodo_pago === 'efectivo' || sesion.estado === 'pendiente_cobro';
 
   const horaFin = new Date();
   const horaInicio = new Date(sesion.hora_inicio);
@@ -135,31 +139,6 @@ export async function finalizarSesion(userId: string): Promise<{ sesion: SesionE
     horaInicio,
     horaFin
   );
-
-  const { data: usuario } = await supabase
-    .from('usuarios_wa')
-    .select('saldo_billetera')
-    .eq('id', userId)
-    .single();
-
-  if (!usuario) {
-    return { sesion: null!, fareInfo: null!, error: '❌ Usuario no encontrado.' };
-  }
-
-  if (usuario.saldo_billetera < fareInfo.costoFinal) {
-    return {
-      sesion: sesion as SesionEstacionamiento,
-      fareInfo,
-      error: `❌ Saldo insuficiente para finalizar. Costo: $${fareInfo.costoFinal}, Saldo: $${usuario.saldo_billetera}`,
-    };
-  }
-
-  const nuevoSaldo = Number(usuario.saldo_billetera) - fareInfo.costoFinal;
-
-  await supabase
-    .from('usuarios_wa')
-    .update({ saldo_billetera: nuevoSaldo })
-    .eq('id', userId);
 
   const { data: sesionActualizada } = await supabase
     .from('sesiones_estacionamiento')
@@ -172,34 +151,118 @@ export async function finalizarSesion(userId: string): Promise<{ sesion: SesionE
     .select()
     .single();
 
-  if (sesion.id_permisionario) {
-    const { data: zona } = await supabase
-      .from('zonas')
-      .select('cuc')
-      .eq('id', sesion.id_zona)
+  if (esEfectivo) {
+    if (sesion.id_permisionario) {
+      const { data: zona } = await supabase
+        .from('zonas')
+        .select('cuc')
+        .eq('id', sesion.id_zona)
+        .single();
+
+      await supabase.from('transacciones').insert({
+        id_permisionario: sesion.id_permisionario,
+        id_sesion: sesion.id,
+        tipo: 'debito',
+        monto: fareInfo.comisionMunicipalEfectivo,
+        descripcion: `Pago efectivo - Comisión municipal 20% - Patente ${sesion.patente} en zona ${zona?.cuc || sesion.id_zona} (${sesion.tipo_vehiculo})`,
+      });
+    }
+  } else {
+    const { data: usuario } = await supabase
+      .from('usuarios_wa')
+      .select('saldo_billetera')
+      .eq('id', userId)
       .single();
 
-    await supabase.from('transacciones').insert({
-      id_permisionario: sesion.id_permisionario,
-      id_sesion: sesion.id,
-      tipo: 'credito',
-      monto: fareInfo.gananciaPermisionarioDigital,
-      descripcion: `Pago digital - Patente ${sesion.patente} en zona ${zona?.cuc || sesion.id_zona} (${sesion.tipo_vehiculo}) - Permisionario keep 100%`,
-    });
+    if (!usuario) {
+      return { sesion: null!, fareInfo: null!, error: '❌ Usuario no encontrado.' };
+    }
+
+    const nuevoSaldo = Number(usuario.saldo_billetera) - fareInfo.costoFinal;
+
+    await supabase
+      .from('usuarios_wa')
+      .update({ saldo_billetera: Math.max(nuevoSaldo, 0) })
+      .eq('id', userId);
+
+    if (sesion.id_permisionario) {
+      const { data: zona } = await supabase
+        .from('zonas')
+        .select('cuc')
+        .eq('id', sesion.id_zona)
+        .single();
+
+      await supabase.from('transacciones').insert({
+        id_permisionario: sesion.id_permisionario,
+        id_sesion: sesion.id,
+        tipo: 'credito',
+        monto: fareInfo.gananciaPermisionarioDigital,
+        descripcion: `Pago digital - Patente ${sesion.patente} en zona ${zona?.cuc || sesion.id_zona} (${sesion.tipo_vehiculo}) - Permisionario keep 100%`,
+      });
+    }
   }
 
-  return { sesion: sesionActualizada as SesionEstacionamiento, fareInfo };
+  return { sesion: sesionActualizada as SesionEstacionamiento, fareInfo, esEfectivo };
 }
 
 export async function obtenerSesionActiva(userId: string): Promise<SesionEstacionamiento | null> {
   const { data } = await supabase
     .from('sesiones_estacionamiento')
     .select('*')
+    .in('estado', ['activo', 'pendiente_cobro'])
     .eq('id_usuario_wa', userId)
-    .eq('estado', 'activo')
     .single();
 
   return data as SesionEstacionamiento | null;
+}
+
+export async function confirmarCobroEfectivo(
+  permisionarioId: string,
+  sesionId: string
+): Promise<{ sesion: SesionEstacionamiento; error?: string }> {
+  const { data: sesion } = await supabase
+    .from('sesiones_estacionamiento')
+    .select('*')
+    .eq('id', sesionId)
+    .eq('estado', 'pendiente_cobro')
+    .single();
+
+  if (!sesion) {
+    return { sesion: null!, error: '❌ No se encontró la sesión pendiente de cobro.' };
+  }
+
+  const { data: permisionario } = await supabase
+    .from('permisionarios')
+    .select('id_zona_actual')
+    .eq('id', permisionarioId)
+    .single();
+
+  if (!permisionario || permisionario.id_zona_actual !== sesion.id_zona) {
+    return { sesion: null!, error: '❌ La sesión no pertenece a tu zona.' };
+  }
+
+  const { data: sesionActualizada, error } = await supabase
+    .from('sesiones_estacionamiento')
+    .update({ estado: 'activo' })
+    .eq('id', sesionId)
+    .select()
+    .single();
+
+  if (error) {
+    return { sesion: null!, error: `Error confirmando cobro: ${error.message}` };
+  }
+
+  const tarifas = APP_CONFIG.fare[sesion.tipo_vehiculo as TipoVehiculo];
+
+  await supabase.from('transacciones').insert({
+    id_permisionario: permisionarioId,
+    id_sesion: sesion.id,
+    tipo: 'debito',
+    monto: tarifas.comisionMunicipalEfectivo,
+    descripcion: `Comisión municipal 20% efectivo - Patente ${sesion.patente} (${sesion.tipo_vehiculo})`,
+  });
+
+  return { sesion: sesionActualizada as SesionEstacionamiento };
 }
 
 export async function registrarPagoEfectivo(
@@ -218,7 +281,7 @@ export async function registrarPagoEfectivo(
     .select('*')
     .eq('patente', patenteUpper)
     .eq('id_zona', zonaId)
-    .eq('estado', 'activo')
+    .in('estado', ['activo', 'pendiente_cobro'])
     .single();
 
   if (sesionActiva) {

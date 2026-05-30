@@ -82,19 +82,22 @@ async function processMessage(phoneNumber: string, text: string): Promise<void> 
           return;
         }
         const result = await iniciarSesion(usuario.id, parsed.cuc, parsed.patente, parsed.tipoVehiculo);
-        if (result.error) {
-          await sendWhatsAppMessage(phoneNumber, formatError(result.error));
+        if (!result.sesion) {
+          if (result.costoMinimo && result.costoMinimo > 0) {
+            // This means patente was invalid or other validation failure
+            await sendWhatsAppMessage(phoneNumber,
+              formatError('No se pudo iniciar la sesión. Verificá la zona y patente.')
+            );
+          }
           return;
         }
 
         const { data: zona } = await supabase.from('zonas').select('cuc').eq('id', result.sesion.id_zona).single();
 
-        await sendWhatsAppMessage(phoneNumber, formatEstacionarSuccess(result.sesion, zona?.cuc || parsed.cuc));
-
-        if (isNewUser) {
-          await sendWhatsAppMessage(phoneNumber,
-            '💡 _Tip: Tu primera vez? Recargá saldo con *RECARGAR 5000* y empezá a estacionar digitalmente con 20% de descuento._'
-          );
+        if (result.sinSaldo) {
+          await sendWhatsAppMessage(phoneNumber, formatEstacionarSuccess(result.sesion, zona?.cuc || parsed.cuc, true));
+        } else {
+          await sendWhatsAppMessage(phoneNumber, formatEstacionarSuccess(result.sesion, zona?.cuc || parsed.cuc, false));
         }
         break;
       }
@@ -105,8 +108,7 @@ async function processMessage(phoneNumber: string, text: string): Promise<void> 
           await sendWhatsAppMessage(phoneNumber, formatError(result.error));
           return;
         }
-        const saldoActual = await consultarSaldo(usuario.id);
-        await sendWhatsAppMessage(phoneNumber, formatFinSuccess(result.sesion, result.fareInfo, saldoActual));
+        await sendWhatsAppMessage(phoneNumber, formatFinSuccess(result.sesion, result.fareInfo, result.esEfectivo));
         break;
       }
 

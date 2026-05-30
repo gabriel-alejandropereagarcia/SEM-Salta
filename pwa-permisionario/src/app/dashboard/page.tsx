@@ -5,7 +5,7 @@ import { useRealtimeSessions } from '@/hooks/useRealtimeSessions';
 import { SessionList } from '@/components/SessionList';
 import { BalanceCard } from '@/components/BalanceCard';
 import { RegisterCashPayment } from '@/components/RegisterCashPayment';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Zona } from '@/types';
 
@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const { permisionario, loading: authLoading, logout } = usePermisionario();
   const [zona, setZona] = useState<Zona | null>(null);
   const [showCash, setShowCash] = useState(false);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
 
   const { sessions, loading: sessionsLoading, refresh } = useRealtimeSessions({
     zonaId: permisionario?.id_zona_actual ?? null,
@@ -30,6 +31,23 @@ export default function DashboardPage() {
         });
     }
   }, [permisionario?.id_zona_actual]);
+
+  const handleConfirmarCobro = useCallback(async (sesionId: string) => {
+    if (!permisionario) return;
+    setConfirmando(sesionId);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/permisionarios/${permisionario.id}/confirmar-cobro/${sesionId}`, {
+        method: 'POST',
+      });
+      refresh();
+    } catch {
+    } finally {
+      setConfirmando(null);
+    }
+  }, [permisionario, refresh]);
+
+  const pendientesCobro = sessions.filter(s => s.estado === 'pendiente_cobro');
+  const sesionesActivas = sessions.filter(s => s.estado === 'activo');
 
   if (authLoading) {
     return (
@@ -51,7 +69,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -73,7 +90,6 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {/* Balance Card */}
         <BalanceCard
           saldo={permisionario.saldo_cuenta_corriente}
           zonaCuc={zona?.cuc || '...'}
@@ -81,14 +97,46 @@ export default function DashboardPage() {
           capacidadMaxima={zona?.capacidad || 20}
         />
 
-        {/* Sessions */}
+        {pendientesCobro.length > 0 && (
+          <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚠️</span>
+              <h3 className="font-bold text-amber-800 text-sm">
+                Cobros pendientes ({pendientesCobro.length})
+              </h3>
+            </div>
+            <p className="text-xs text-amber-700">
+              Conductores sin saldo que estacionaron y deben pagar en efectivo.
+            </p>
+            <div className="space-y-2">
+              {pendientesCobro.map(s => (
+                <div key={s.id} className="bg-white rounded-xl p-3 flex items-center justify-between border border-amber-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{s.tipo_vehiculo === 'moto' ? '🏍' : '🚗'}</span>
+                    <span className="font-bold text-slate-800 text-sm">{s.patente}</span>
+                    <span className="text-amber-700 text-xs font-bold">${s.tipo_vehiculo === 'moto' ? '300' : '700'}/h</span>
+                  </div>
+                  <button
+                    onClick={() => handleConfirmarCobro(s.id)}
+                    disabled={confirmando === s.id}
+                    className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition disabled:opacity-50"
+                  >
+                    {confirmando === s.id ? '✓' : 'Cobrar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <SessionList
-          sessions={sessions}
+          sessions={sesionesActivas}
           loading={sessionsLoading}
           capacidadMaxima={zona?.capacidad || 20}
+          onConfirmarCobro={handleConfirmarCobro}
+          confirmando={confirmando}
         />
 
-        {/* Cash Payment Toggle */}
         <button
           onClick={() => setShowCash(!showCash)}
           className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center justify-between hover:bg-slate-50 transition"
@@ -115,7 +163,6 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* Nav Bar */}
         <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-50">
           <div className="max-w-lg mx-auto flex">
             <a href="/dashboard" className="flex-1 flex flex-col items-center py-2.5 text-blue-600">

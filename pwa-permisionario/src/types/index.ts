@@ -1,5 +1,5 @@
 export type TipoVehiculo = 'auto' | 'moto';
-export type EstadoSesion = 'activo' | 'finalizado' | 'anulado';
+export type EstadoSesion = 'activo' | 'pendiente_cobro' | 'finalizado' | 'anulado';
 export type MetodoPago = 'digital' | 'efectivo';
 
 export interface Zona {

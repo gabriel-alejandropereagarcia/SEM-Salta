@@ -38,12 +38,12 @@ router.post('/estacionar', async (req: Request, res: Response) => {
     const usuario = await buscarOCrearUsuarioWa(telefono);
     const result = await iniciarSesion(usuario.id, cuc, patente, tipoVehiculo);
 
-    if (result.error) {
-      res.status(400).json({ error: result.error });
+    if (!result.sesion) {
+      res.status(400).json({ error: 'No se pudo iniciar sesion' });
       return;
     }
 
-    res.json(result.sesion);
+    res.json({ sesion: result.sesion, sinSaldo: result.sinSaldo });
   } catch (error) {
     res.status(500).json({ error: 'Error iniciando sesion' });
   }
