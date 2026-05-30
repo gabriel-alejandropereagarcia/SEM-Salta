@@ -20,7 +20,7 @@ const FLOWS = [
     description: 'El conductor finaliza su sesión y se cobra el tiempo real',
     steps: [
       { role: 'user', message: 'FIN' },
-      { role: 'bot', message: '🏁 *Estacionamiento finalizado*\n🚗 Patente: ABC123D\n⏱ Duración: 1h 23min\n💰 Costo: $840\n📄 Saldo restante: $4.160\n\n¡Gracias por usar SEM Digital! 🙏' },
+      { role: 'bot', message: '🏁 *Estacionamiento finalizado*\n🚗 Patente: ABC123D\n⏱ Duración: 1h 23min\n💰 Costo: $980\n📄 Saldo restante: $4.020\n\n¡Gracias por usar SEM Digital! 🙏' },
     ],
   },
   {
@@ -30,7 +30,7 @@ const FLOWS = [
     description: 'El conductor consulta su saldo disponible',
     steps: [
       { role: 'user', message: 'SALDO' },
-      { role: 'bot', message: '💰 *Tu saldo*\nDisponible: $5.000,00\n\n📋 *Sesión activa*\n🚗 ABC123D en zona A12\n🕐 13:30 → 14:30\n📱 Digital (con descuento)\n\nPara recargar escribí: *RECARGAR monto*\nEjemplo: RECARGAR 5000' },
+      { role: 'bot', message: '💰 *Tu saldo*\nDisponible: $5.000,00\n\n📋 *Sesión activa*\n🚗 ABC123D en zona A12\n🕐 13:30 → 14:30\n📱 Digital\n\nPara recargar escribí: *RECARGAR monto*' },
     ],
   },
   {
@@ -45,104 +45,204 @@ const FLOWS = [
     ],
   },
   {
-    id: 'tarifas',
-    title: 'Ver tarifas',
-    icon: '📋',
-    description: 'El conductor consulta las tarifas vigentes',
-    steps: [
-      { role: 'user', message: 'TARIFAS' },
-      { role: 'bot', message: '📋 *Tarifas SEM Salta*\n\n🚗 *Auto*\n  Tarifa: $700/h\n  Pago digital: sin comisión municipal ✅\n  Pago efectivo: comisión $140/h (20%)\n\n🏍 *Moto*\n  Tarifa: $300/h\n  Pago digital: sin comisión municipal ✅\n  Pago efectivo: comisión $60/h (20%)\n\n💡 El conductor siempre paga tarifa completa.\n💡 El incentivo digital es para el permisionario.\n\nFraccionamiento: cada 15 min (desde 2da hora)\nTolerancia: 5 min' },
-    ],
-  },
-  {
     id: 'efectivo',
     title: 'Pago efectivo',
     icon: '💵',
-    description: 'El permisionario registra pago en efectivo. Se descuenta 20% comisión municipal de su cuenta.',
+    description: 'El permisionario registra un pago en efectivo desde la PWA',
     steps: [
-      { role: 'system', message: 'Permisionario registra pago efectivo desde PWA:\n• Patente: XYZ789\n• Tipo: Auto\n• Se crea sesión con metodo_pago = efectivo\n• Se genera DÉBITO de $140 (20% comisión municipal) en cuenta corriente\n• El conductor pagó $700 directamente al permisionario' },
+      { role: 'system', message: 'Permisionario registra pago efectivo desde PWA:\n• Patente: XYZ789\n• Tipo: Auto\n• Se crea sesión con metodo_pago = efectivo\n• Se genera DÉBITO de $140 (20% comisión municipal)\n• El conductor pagó $700 directamente al permisionario' },
     ],
   },
 ];
 
+const CREDENTIALS = {
+  legajo: 'P001',
+  password: 'Demo2026',
+  telefono: '5493875555123',
+};
+
 export default function HomePage() {
   const [activeFlow, setActiveFlow] = useState<string>('estacionar');
   const [stepIndex, setStepIndex] = useState(0);
+  const [showSeedInfo, setShowSeedInfo] = useState(false);
 
   const currentFlow = FLOWS.find((f) => f.id === activeFlow)!;
   const visibleSteps = currentFlow.steps.slice(0, stepIndex + 1);
   const canAdvance = stepIndex < currentFlow.steps.length - 1;
   const isLastStep = stepIndex >= currentFlow.steps.length - 1;
 
-  function handleSelectFlow(id: string) {
-    setActiveFlow(id);
-    setStepIndex(0);
-  }
-
-  function handleNext() {
-    if (canAdvance) {
-      setStepIndex((prev) => prev + 1);
-    }
-  }
-
-  function handleReset() {
-    setStepIndex(0);
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="text-5xl mb-3">🅿️</div>
-            <h1 className="text-3xl font-bold mb-2">SEM Salta Digital</h1>
-            <p className="text-blue-200 text-lg">
-              Sistema de Estacionamiento Medido — Billetera Virtual sobre WhatsApp
-            </p>
-            <p className="text-blue-300 text-sm mt-2">
-              El conductor paga tarifa completa. El incentivo digital es para el permisionario.
+    <div className="min-h-screen bg-slate-50">
+      {/* Nav */}
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              S
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 text-sm">SEM Salta</span>
+              <span className="text-slate-400 text-sm ml-1 hidden sm:inline">Digital</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition">
+              PWA Permisionario
+            </a>
+            <a href="/dashboard" className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm">
+              Ingresar
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white/90 text-sm mb-6">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            PunaTech 2026 — Ordenanza 12.170
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-4 tracking-tight">
+            SEM Salta Digital
+          </h1>
+          <p className="text-lg sm:text-xl text-blue-200 max-w-2xl mx-auto mb-8">
+            Billetera Virtual sobre WhatsApp. Sin app, sin fricción. El conductor estaciona con un mensaje.
+          </p>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4">
+              <div className="text-2xl sm:text-3xl font-bold text-white">$700</div>
+              <div className="text-xs sm:text-sm text-blue-200 mt-1">Auto / hora</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4">
+              <div className="text-2xl sm:text-3xl font-bold text-white">$300</div>
+              <div className="text-xs sm:text-sm text-blue-200 mt-1">Moto / hora</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4">
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-300">0%</div>
+              <div className="text-xs sm:text-sm text-blue-200 mt-1">Comisión digital</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4">
+              <div className="text-2xl sm:text-3xl font-bold text-white">0</div>
+              <div className="text-xs sm:text-sm text-blue-200 mt-1">Apps que descargar</div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="#simulador" className="bg-white text-blue-700 font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-50 transition text-sm">
+              Ver simulador WhatsApp
+            </a>
+            <a href="/dashboard" className="bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl border border-blue-400 hover:bg-blue-600 transition text-sm">
+              Probar PWA Permisionario
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center mb-2">¿Cómo funciona?</h2>
+        <p className="text-slate-500 text-center mb-12 max-w-2xl mx-auto">El conductor siempre paga la tarifa completa. El incentivo digital es para el permisionario: sin comisión municipal.</p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[
+            { step: '1', icon: '💬', title: 'El conductor envía', desc: 'ESTACIONAR A12 ABC123D por WhatsApp' },
+            { step: '2', icon: '✅', title: 'El bot valida', desc: 'Verifica zona, saldo y crea la sesión' },
+            { step: '3', icon: '📡', title: 'Realtime', desc: 'El permisionario ve el auto en su PWA al instante' },
+            { step: '4', icon: '🏁', title: 'El conductor envía', desc: 'FIN para terminar. Se cobra el tiempo real' },
+            { step: '5', icon: '💰', title: 'Clearing', desc: 'Permisionario recibe 100% si es digital, 80% si es efectivo' },
+          ].map((item) => (
+            <div key={item.step} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-center">
+              <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold text-sm mx-auto mb-3">
+                {item.step}
+              </div>
+              <div className="text-2xl mb-2">{item.icon}</div>
+              <h3 className="font-semibold text-slate-800 text-sm mb-1">{item.title}</h3>
+              <p className="text-slate-500 text-xs">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Clearing model */}
+      <section className="bg-white border-y border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center mb-2">Modelo de Clearing</h2>
+          <p className="text-slate-500 text-center mb-10 max-w-2xl mx-auto">El conductor paga tarifa completa. El permisionario retiene más si el pago es digital.</p>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="py-3 px-4 text-left font-semibold text-slate-600">Escenario</th>
+                  <th className="py-3 px-4 text-right font-semibold text-slate-600">Conductor paga</th>
+                  <th className="py-3 px-4 text-right font-semibold text-slate-600">Permisionario recibe</th>
+                  <th className="py-3 px-4 text-right font-semibold text-slate-600">Municipalidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-slate-100 bg-emerald-50/50">
+                  <td className="py-3 px-4">
+                    <span className="badge-digital">Digital</span>{' '}Auto
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium">$700/h</td>
+                  <td className="py-3 px-4 text-right font-bold text-emerald-600">$700/h crédito</td>
+                  <td className="py-3 px-4 text-right text-slate-400">$0 (0%)</td>
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="py-3 px-4">
+                    <span className="badge-efectivo">Efectivo</span>{' '}Auto
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium">$700/h</td>
+                  <td className="py-3 px-4 text-right font-medium">$560/h neto</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-600">$140/h (20%)</td>
+                </tr>
+                <tr className="border-b border-slate-100 bg-emerald-50/50">
+                  <td className="py-3 px-4">
+                    <span className="badge-digital">Digital</span>{' '}Moto
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium">$300/h</td>
+                  <td className="py-3 px-4 text-right font-bold text-emerald-600">$300/h crédito</td>
+                  <td className="py-3 px-4 text-right text-slate-400">$0 (0%)</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4">
+                    <span className="badge-efectivo">Efectivo</span>{' '}Moto
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium">$300/h</td>
+                  <td className="py-3 px-4 text-right font-medium">$240/h neto</td>
+                  <td className="py-3 px-4 text-right font-bold text-red-600">$60/h (20%)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+            <p className="text-sm text-blue-800">
+              <strong>Incentivo digital:</strong> El permisionario retiene el <strong>100%</strong> con pagos digitales vs. el <strong>80%</strong> con efectivo. El conductor siempre paga la tarifa completa.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="max-w-5xl mx-auto -mt-4 px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">$700</div>
-            <div className="text-xs text-gray-500">Auto/h (tarifa completa)</div>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">$300</div>
-            <div className="text-xs text-gray-500">Moto/h (tarifa completa)</div>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">0%</div>
-            <div className="text-xs text-gray-500">Comisión digital</div>
-          </div>
-          <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">0</div>
-            <div className="text-xs text-gray-500">Apps que descargar</div>
-          </div>
-        </div>
-      </div>
+      {/* WhatsApp Simulator */}
+      <section id="simulador" className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center mb-2">Simulador WhatsApp</h2>
+        <p className="text-slate-500 text-center mb-8">Proba los flujos de interacción del conductor con el bot</p>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              📱 Simulador WhatsApp
-            </h2>
-
             <div className="flex flex-wrap gap-2 mb-4">
               {FLOWS.map((flow) => (
                 <button
                   key={flow.id}
-                  onClick={() => handleSelectFlow(flow.id)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  onClick={() => { setActiveFlow(flow.id); setStepIndex(0); }}
+                  className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                     activeFlow === flow.id
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                      : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
                   }`}
                 >
                   {flow.icon} {flow.title}
@@ -150,43 +250,43 @@ export default function HomePage() {
               ))}
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">{currentFlow.description}</p>
+            <p className="text-sm text-slate-500 mb-4">{currentFlow.description}</p>
 
-            <div className="bg-gray-100 rounded-xl overflow-hidden shadow-lg">
-              <div className="bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
-                  SEM
+            <div className="bg-slate-100 rounded-2xl overflow-hidden shadow-xl border border-slate-200">
+              <div className="bg-[#075E54] text-white px-4 py-3 flex items-center gap-3">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#075E54] font-bold text-sm shadow">
+                  S
                 </div>
                 <div>
-                  <div className="font-semibold">SEM Salta Digital</div>
-                  <div className="text-xs text-green-200">En línea</div>
+                  <div className="font-semibold text-sm">SEM Salta Digital</div>
+                  <div className="text-[10px] text-green-200">en línea</div>
                 </div>
               </div>
 
-              <div className="p-4 space-y-3 min-h-[300px] max-h-[400px] overflow-y-auto">
+              <div className="p-4 space-y-2 min-h-[280px] max-h-[380px] overflow-y-auto bg-[#ECE5DD]">
                 {visibleSteps.map((step, idx) => (
                   <div
                     key={idx}
                     className={`flex ${step.role === 'user' ? 'justify-end' : step.role === 'system' ? 'justify-center' : 'justify-start'}`}
                   >
                     {step.role === 'user' && (
-                      <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-green-100 text-green-900 rounded-tr-none">
-                        <p className="whitespace-pre-line">{step.message}</p>
-                        <div className="text-[10px] mt-1 text-green-600">
-                          {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      <div className="max-w-[80%] bg-[#DCF8C6] rounded-2xl rounded-tr-sm px-3 py-2 text-sm shadow-sm">
+                        <p className="whitespace-pre-line text-slate-800">{step.message}</p>
+                        <div className="text-[9px] text-slate-400 mt-0.5 text-right">
+                          {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} ✓✓
                         </div>
                       </div>
                     )}
                     {step.role === 'system' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800 max-w-full">
-                        <p className="font-medium mb-1">💻 Sistema (PWA Permisionario)</p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 text-sm text-blue-800 max-w-full shadow-sm">
+                        <p className="font-semibold text-xs mb-1">💻 Sistema (PWA Permisionario)</p>
                         <p className="whitespace-pre-line text-xs">{step.message}</p>
                       </div>
                     )}
                     {step.role === 'bot' && (
-                      <div className="max-w-[80%] bg-white text-gray-800 rounded-lg rounded-tl-none shadow-sm px-3 py-2">
-                        <p className="whitespace-pre-line text-sm">{step.message}</p>
-                        <div className="text-[10px] mt-1 text-gray-400">
+                      <div className="max-w-[80%] bg-white rounded-2xl rounded-tl-sm px-3 py-2 text-sm shadow-sm">
+                        <p className="whitespace-pre-line text-slate-800">{step.message}</p>
+                        <div className="text-[9px] text-slate-400 mt-0.5">
                           {new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} ✓✓
                         </div>
                       </div>
@@ -195,176 +295,105 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="bg-gray-50 px-4 py-3 flex gap-2">
+              <div className="bg-slate-50 px-4 py-3 flex gap-2 border-t border-slate-200">
                 <button
-                  onClick={handleReset}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                  onClick={() => setStepIndex(0)}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50 transition"
                 >
                   ↻ Reiniciar
                 </button>
                 {canAdvance && (
                   <button
-                    onClick={handleNext}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex-1"
+                    onClick={() => setStepIndex((prev) => prev + 1)}
+                    className="px-4 py-2 bg-[#25D366] text-white rounded-xl text-sm hover:bg-[#20BD5A] transition flex-1 shadow-sm"
                   >
-                    Siguiente mensaje →
+                    Siguiente →
                   </button>
                 )}
                 {isLastStep && (
                   <button
-                    onClick={handleReset}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex-1"
+                    onClick={() => setStepIndex(0)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition flex-1 shadow-sm"
                   >
-                    ✓ Flujo completado
+                    ✓ Completado
                   </button>
                 )}
               </div>
             </div>
           </div>
 
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              🏗️ Arquitectura del Sistema
-            </h2>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <span className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-xs font-bold">🏗</span>
+                Stack Tecnológico
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { icon: 'WA', color: 'bg-green-100 text-green-700', name: 'WhatsApp Business API', desc: '94% penetración en Argentina. Cero fricción.' },
+                  { icon: 'JS', color: 'bg-yellow-100 text-yellow-700', name: 'Node.js + TypeScript', desc: 'Tipos seguros. Mejor soporte para APIs de WA y MP.' },
+                  { icon: 'PG', color: 'bg-emerald-100 text-emerald-700', name: 'Supabase (PostgreSQL + Realtime)', desc: 'RLS nativo, WebSockets gratis, escalable.' },
+                  { icon: 'NX', color: 'bg-blue-100 text-blue-700', name: 'Next.js PWA', desc: 'SSR, instalable, actualizaciones en tiempo real.' },
+                  { icon: 'MP', color: 'bg-cyan-100 text-cyan-700', name: 'Mercado Pago SDK', desc: '70%+ adopción. Checkout Pro sin manejo de tarjetas.' },
+                ].map((t) => (
+                  <div key={t.icon} className="flex items-start gap-3">
+                    <span className={`w-8 h-8 ${t.color} rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+                      {t.icon}
+                    </span>
+                    <div>
+                      <div className="font-medium text-slate-800 text-sm">{t.name}</div>
+                      <div className="text-xs text-slate-500">{t.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-              <h3 className="font-semibold text-gray-700 mb-3">Flujo de Pago Digital</h3>
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
+              <h3 className="font-bold text-lg mb-4">🔑 Credenciales de prueba</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                  <span>Conductor envía <code className="bg-gray-100 px-1 rounded">ESTACIONAR A12 ABC123D</code></span>
+                <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
+                  <span className="text-blue-200">PWA Legajo</span>
+                  <span className="font-mono font-bold">P001</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                  <span>Bot valida zona, saldo y crea sesión</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                  <span>Supabase Realtime notifica al permisionario</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                  <span>Conductor envía <code className="bg-gray-100 px-1 rounded">FIN</code></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-bold">5</span>
-                  <span>Sistema calcula costo + genera crédito para permisionario</span>
+                <div className="flex justify-between bg-white/10 rounded-xl px-4 py-2.5">
+                  <span className="text-blue-200">WhatsApp (test)</span>
+                  <span className="font-mono font-bold">5493875555123</span>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-              <h3 className="font-semibold text-gray-700 mb-3">💰 Modelo de Clearing</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2 text-left text-gray-500">Escenario</th>
-                    <th className="py-2 text-right text-gray-500">Conductor</th>
-                    <th className="py-2 text-right text-gray-500">Permisionario</th>
-                    <th className="py-2 text-right text-gray-500">Municipalidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="py-2">Digital Auto</td>
-                    <td className="py-2 text-right font-medium">$700/h</td>
-                    <td className="py-2 text-right text-green-600 font-medium">$700/h crédito</td>
-                    <td className="py-2 text-right text-gray-500">$0 (0% comisión)</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-2">Efectivo Auto</td>
-                    <td className="py-2 text-right font-medium">$700/h</td>
-                    <td className="py-2 text-right font-medium">$560/h neto</td>
-                    <td className="py-2 text-right text-red-600 font-medium">$140/h (20%)</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="py-2">Digital Moto</td>
-                    <td className="py-2 text-right font-medium">$300/h</td>
-                    <td className="py-2 text-right text-green-600 font-medium">$300/h crédito</td>
-                    <td className="py-2 text-right text-gray-500">$0 (0% comisión)</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2">Efectivo Moto</td>
-                    <td className="py-2 text-right font-medium">$300/h</td>
-                    <td className="py-2 text-right font-medium">$240/h neto</td>
-                    <td className="py-2 text-right text-red-600 font-medium">$60/h (20%)</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p className="text-xs text-gray-400 mt-2">
-                * El conductor siempre paga tarifa completa. El incentivo digital es para el permisionario: 0% comisión con pagos digitales.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <h3 className="font-semibold text-gray-700 mb-3">🔧 Stack Tecnológico</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <span className="text-green-600 font-bold">WA</span>
-                  <div>
-                    <div className="font-medium">WhatsApp Business API</div>
-                    <div className="text-gray-500">94% penetración. Cero fricción.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 font-bold">JS</span>
-                  <div>
-                    <div className="font-medium">Node.js + TypeScript + Express</div>
-                    <div className="text-gray-500">Tipos seguros. Mejor soporte para APIs de WA y MP.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-emerald-600 font-bold">PG</span>
-                  <div>
-                    <div className="font-medium">Supabase (PostgreSQL + Realtime)</div>
-                    <div className="text-gray-500">RLS nativo, WebSockets, escalable.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-blue-600 font-bold">NX</span>
-                  <div>
-                    <div className="font-medium">Next.js PWA</div>
-                    <div className="text-gray-500">SSR, instalable, tiempo real.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-cyan-600 font-bold">MP</span>
-                  <div>
-                    <div className="font-medium">Mercado Pago SDK</div>
-                    <div className="text-gray-500">70%+ adopción. Checkout Pro.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-md p-6 text-white text-center">
-              <h3 className="font-bold text-lg mb-2">🚀 Demo del Permisionario</h3>
-              <p className="text-blue-200 text-sm mb-4">
-                Accedé a la PWA con datos de prueba
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <a
-                  href="/dashboard"
-                  className="bg-white text-blue-700 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 text-sm"
-                >
-                  Dashboard Permisionario
+              <p className="text-xs text-blue-200 mt-3 mb-4">Usá estas credenciales para probar el panel del permisionario</p>
+              <div className="flex gap-3">
+                <a href="/dashboard" className="bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-blue-50 transition flex-1 text-center">
+                  Ir al Dashboard
                 </a>
-                <a
-                  href="/cuenta-corriente"
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-400 border border-blue-400 text-sm"
-                >
+                <a href="/cuenta-corriente" className="bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl text-sm hover:bg-blue-400 border border-blue-400 transition flex-1 text-center">
                   Cuenta Corriente
                 </a>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="bg-gray-800 text-gray-400 text-center py-6 text-sm mt-8">
-        <p>SEM Salta Digital — PunaTech 2026</p>
-        <p className="text-xs mt-1">Propuesta para modernización del Sistema de Estacionamiento Medido — Ordenanza 12.170</p>
-      </div>
+      {/* Footer */}
+      <footer className="bg-slate-900 text-slate-400">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                S
+              </div>
+              <div>
+                <div className="text-white font-semibold text-sm">SEM Salta Digital</div>
+                <div className="text-xs">PunaTech 2026</div>
+              </div>
+            </div>
+            <div className="text-xs text-slate-500">
+              Propuesta para modernización del SEM — Ordenanza 12.170
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -5,10 +5,9 @@ import { useEffect, useState } from 'react';
 
 interface SessionCardProps {
   session: SesionEstacionamiento;
-  onEnd?: (id: string) => void;
 }
 
-export function SessionCard({ session, onEnd }: SessionCardProps) {
+export function SessionCard({ session }: SessionCardProps) {
   const [tiempoRestante, setTiempoRestante] = useState<string>('');
 
   useEffect(() => {
@@ -39,34 +38,31 @@ export function SessionCard({ session, onEnd }: SessionCardProps) {
   });
 
   const horaFin = session.hora_fin
-    ? new Date(session.hora_fin).toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+    ? new Date(session.hora_fin).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
     : '--:--';
 
   const isDigital = session.metodo_pago === 'digital';
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${isDigital ? 'border-l-green-500' : 'border-l-yellow-500'}`}>
+    <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm p-4 transition hover:shadow-md ${isDigital ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-amber-500'}`}>
       <div className="flex justify-between items-start">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold">{session.patente}</span>
-            <span className={`text-xs px-2 py-0.5 rounded ${session.tipo_vehiculo === 'moto' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-              {session.tipo_vehiculo === 'moto' ? '🏍' : '🚗'} {session.tipo_vehiculo}
-            </span>
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
+            session.tipo_vehiculo === 'moto' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
+          }`}>
+            {session.tipo_vehiculo === 'moto' ? '🏍' : '🚗'}
           </div>
-          <div className="text-sm text-gray-500 mt-1">
-            {horaInicio} → {horaFin}
+          <div>
+            <div className="font-bold text-slate-800 text-sm">{session.patente}</div>
+            <div className="text-xs text-slate-400">{horaInicio} → {horaFin}</div>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={`text-xs px-2 py-1 rounded-full ${isDigital ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+          <span className={isDigital ? 'badge-digital' : 'badge-efectivo'}>
             {isDigital ? '📱 Digital' : '💵 Efectivo'}
           </span>
           {session.estado === 'activo' && (
-            <span className="text-sm font-mono text-gray-600">
+            <span className="text-xs font-mono text-slate-500">
               ⏱ {tiempoRestante}
             </span>
           )}
