@@ -40,7 +40,7 @@ export interface SesionEstacionamiento {
   tipo_vehiculo: TipoVehiculo;
   hora_inicio: string;
   hora_fin: string | null;
-  costo_total: number | null;
+  custo_total: number | null;
   estado: EstadoSesion;
   metodo_pago: MetodoPago;
   created_at: string;
@@ -77,10 +77,9 @@ export interface ParsedCommand {
 
 export interface FareResult {
   tarifaBase: number;
-  tarifaDigital: number;
-  comisionMunicipal: number;
-  gananciaPermisionario: number;
+  costoFinal: number;
+  comisionMunicipalEfectivo: number;
+  gananciaPermisionarioDigital: number;
   horas: number;
   minutosExcedentes: number;
-  costoFinal: number;
 }

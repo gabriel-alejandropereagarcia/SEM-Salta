@@ -194,8 +194,8 @@ router.get('/status', async (_req: Request, res: Response) => {
       },
       config: {
         tarifas: {
-          auto: { base: APP_CONFIG.fare.auto.base, digital: APP_CONFIG.fare.auto.digital },
-          moto: { base: APP_CONFIG.fare.moto.base, digital: APP_CONFIG.fare.moto.digital },
+          auto: { base: APP_CONFIG.fare.auto.base, comisionEfectivo: APP_CONFIG.fare.auto.comisionMunicipalEfectivo },
+          moto: { base: APP_CONFIG.fare.moto.base, comisionEfectivo: APP_CONFIG.fare.moto.comisionMunicipalEfectivo },
         },
       },
     });

@@ -10,14 +10,12 @@ export async function registrarCreditoDigital(
   tipoVehiculo: TipoVehiculo,
   costoTotal: number
 ): Promise<void> {
-  const ganancia = costoTotal;
-
   await supabase.from('transacciones').insert({
     id_permisionario: permisionarioId,
     id_sesion: sesionId,
     tipo: 'credito',
-    monto: ganancia,
-    descripcion: `Pago digital - Patente ${patente} en zona ${zonaCuc} (${tipoVehiculo})`,
+    monto: costoTotal,
+    descripcion: `Pago digital - Patente ${patente} en zona ${zonaCuc} (${tipoVehiculo}) - Permisionario keep 100%`,
   });
 }
 
@@ -25,16 +23,19 @@ export async function registrarDebitoEfectivo(
   permisionarioId: string,
   sesionId: string,
   patente: string,
-  tipoVehiculo: TipoVehiculo
+  tipoVehiculo: TipoVehiculo,
+  horas: number = 1
 ): Promise<void> {
-  const comision = APP_CONFIG.fare[tipoVehiculo].comisionMunicipal;
+  const config = APP_CONFIG.fare[tipoVehiculo];
+  const comisionPorHora = config.comisionMunicipalEfectivo;
+  const montoComision = comisionPorHora * horas;
 
   await supabase.from('transacciones').insert({
     id_permisionario: permisionarioId,
     id_sesion: sesionId,
     tipo: 'debito',
-    monto: comision,
-    descripcion: `Comisión municipal efectivo - Patente ${patente} (${tipoVehiculo})`,
+    monto: montoComision,
+    descripcion: `Comisión municipal efectivo (20%) - Patente ${patente} (${tipoVehiculo}) - ${horas}h`,
   });
 }
 

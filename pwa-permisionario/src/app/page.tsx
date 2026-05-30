@@ -10,7 +10,7 @@ const FLOWS = [
     description: 'El conductor envía ESTACIONAR por WhatsApp',
     steps: [
       { role: 'user', message: 'ESTACIONAR A12 ABC123D' },
-      { role: 'bot', message: '✅ *Estacionamiento iniciado*\n🚗 Patente: ABC123D\n📍 Zona: A12\n🕐 Hasta: 15:30\n📱 Pago digital - 20% descuento aplicado\n\nEscribí *FIN* cuando quieras terminar.' },
+      { role: 'bot', message: '✅ *Estacionamiento iniciado*\n🚗 Patente: ABC123D\n📍 Zona: A12\n🕐 13:30 → 14:30\n📱 Pago digital registrado\n\nEscribí *FIN* cuando quieras terminar.' },
     ],
   },
   {
@@ -51,16 +51,16 @@ const FLOWS = [
     description: 'El conductor consulta las tarifas vigentes',
     steps: [
       { role: 'user', message: 'TARIFAS' },
-      { role: 'bot', message: '📋 *Tarifas SEM Salta*\n\n🚗 *Auto*\n  Tarifa base: $700/h\n  Tarifa digital: $560/h (20% de descuento)\n\n🏍 *Moto*\n  Tarifa base: $300/h\n  Tarifa digital: $240/h (20% de descuento)\n\nFraccionamiento: cada 15 min (desde 2da hora)\nTolerancia: 5 min' },
+      { role: 'bot', message: '📋 *Tarifas SEM Salta*\n\n🚗 *Auto*\n  Tarifa: $700/h\n  Pago digital: sin comisión municipal ✅\n  Pago efectivo: comisión $140/h (20%)\n\n🏍 *Moto*\n  Tarifa: $300/h\n  Pago digital: sin comisión municipal ✅\n  Pago efectivo: comisión $60/h (20%)\n\n💡 El conductor siempre paga tarifa completa.\n💡 El incentivo digital es para el permisionario.\n\nFraccionamiento: cada 15 min (desde 2da hora)\nTolerancia: 5 min' },
     ],
   },
   {
     id: 'efectivo',
     title: 'Pago efectivo',
     icon: '💵',
-    description: 'El permisionario registra un pago en efectivo desde la PWA',
+    description: 'El permisionario registra pago en efectivo. Se descuenta 20% comisión municipal de su cuenta.',
     steps: [
-      { role: 'system', message: 'Permisionario registra pago efectivo desde PWA:\n• Patente: XYZ789\n• Tipo: Auto\n• Se crea sesión con metodo_pago = efectivo\n• Se genera DÉBITO de $140 (20% comisión municipal) en cuenta corriente' },
+      { role: 'system', message: 'Permisionario registra pago efectivo desde PWA:\n• Patente: XYZ789\n• Tipo: Auto\n• Se crea sesión con metodo_pago = efectivo\n• Se genera DÉBITO de $140 (20% comisión municipal) en cuenta corriente\n• El conductor pagó $700 directamente al permisionario' },
     ],
   },
 ];
@@ -100,7 +100,7 @@ export default function HomePage() {
               Sistema de Estacionamiento Medido — Billetera Virtual sobre WhatsApp
             </p>
             <p className="text-blue-300 text-sm mt-2">
-              PunaTech 2026 — Propuesta para Ordenanza 12.170
+              El conductor paga tarifa completa. El incentivo digital es para el permisionario.
             </p>
           </div>
         </div>
@@ -109,16 +109,16 @@ export default function HomePage() {
       <div className="max-w-5xl mx-auto -mt-4 px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">20%</div>
-            <div className="text-xs text-gray-500">Descuento digital</div>
+            <div className="text-2xl font-bold text-blue-600">$700</div>
+            <div className="text-xs text-gray-500">Auto/h (tarifa completa)</div>
           </div>
           <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">$560</div>
-            <div className="text-xs text-gray-500">Auto/h digital</div>
+            <div className="text-2xl font-bold text-green-600">$300</div>
+            <div className="text-xs text-gray-500">Moto/h (tarifa completa)</div>
           </div>
           <div className="bg-white rounded-xl shadow-md p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">$240</div>
-            <div className="text-xs text-gray-500">Moto/h digital</div>
+            <div className="text-2xl font-bold text-orange-600">0%</div>
+            <div className="text-xs text-gray-500">Comisión digital</div>
           </div>
           <div className="bg-white rounded-xl shadow-md p-4 text-center">
             <div className="text-2xl font-bold text-purple-600">0</div>
@@ -267,32 +267,32 @@ export default function HomePage() {
                 <tbody>
                   <tr className="border-b">
                     <td className="py-2">Digital Auto</td>
-                    <td className="py-2 text-right text-green-600 font-medium">$560/h</td>
-                    <td className="py-2 text-right font-medium">$560/h crédito</td>
-                    <td className="py-2 text-right text-gray-500">—</td>
+                    <td className="py-2 text-right font-medium">$700/h</td>
+                    <td className="py-2 text-right text-green-600 font-medium">$700/h crédito</td>
+                    <td className="py-2 text-right text-gray-500">$0 (0% comisión)</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-2">Efectivo Auto</td>
-                    <td className="py-2 text-right">$700/h</td>
+                    <td className="py-2 text-right font-medium">$700/h</td>
                     <td className="py-2 text-right font-medium">$560/h neto</td>
-                    <td className="py-2 text-right text-red-600 font-medium">$140/h</td>
+                    <td className="py-2 text-right text-red-600 font-medium">$140/h (20%)</td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-2">Digital Moto</td>
-                    <td className="py-2 text-right text-green-600 font-medium">$240/h</td>
-                    <td className="py-2 text-right font-medium">$240/h crédito</td>
-                    <td className="py-2 text-right text-gray-500">—</td>
+                    <td className="py-2 text-right font-medium">$300/h</td>
+                    <td className="py-2 text-right text-green-600 font-medium">$300/h crédito</td>
+                    <td className="py-2 text-right text-gray-500">$0 (0% comisión)</td>
                   </tr>
                   <tr>
                     <td className="py-2">Efectivo Moto</td>
-                    <td className="py-2 text-right">$300/h</td>
+                    <td className="py-2 text-right font-medium">$300/h</td>
                     <td className="py-2 text-right font-medium">$240/h neto</td>
-                    <td className="py-2 text-right text-red-600 font-medium">$60/h</td>
+                    <td className="py-2 text-right text-red-600 font-medium">$60/h (20%)</td>
                   </tr>
                 </tbody>
               </table>
               <p className="text-xs text-gray-400 mt-2">
-                * El permisionario siempre percibe el 80% de la tarifa base. El descuento digital lo absorbe la municipalidad.
+                * El conductor siempre paga tarifa completa. El incentivo digital es para el permisionario: 0% comisión con pagos digitales.
               </p>
             </div>
 

@@ -52,7 +52,7 @@ export async function iniciarSesion(
     .eq('estado', 'activo');
 
   if (sesionesActivas && sesionesActivas.length >= zona.capacidad) {
-    return { sesion: null!, error: `❌ La zona ${cuc} está llena (${zona.capacidad}/${zona.capacidad} lugares ocupados).` };
+    return { sesion: null!, error: `❌ La zona ${cuc} está llena (${zona.capacidad}/${zona.capacidad} lugares).` };
   }
 
   const { data: sesionActiva } = await supabase
@@ -183,8 +183,8 @@ export async function finalizarSesion(userId: string): Promise<{ sesion: SesionE
       id_permisionario: sesion.id_permisionario,
       id_sesion: sesion.id,
       tipo: 'credito',
-      monto: fareInfo.gananciaPermisionario,
-      descripcion: `Pago digital - Patente ${sesion.patente} en zona ${zona?.cuc || sesion.id_zona}`,
+      monto: fareInfo.gananciaPermisionarioDigital,
+      descripcion: `Pago digital - Patente ${sesion.patente} en zona ${zona?.cuc || sesion.id_zona} (${sesion.tipo_vehiculo}) - Permisionario keep 100%`,
     });
   }
 
@@ -251,8 +251,8 @@ export async function registrarPagoEfectivo(
     id_permisionario: permisionarioId,
     id_sesion: sesion.id,
     tipo: 'debito',
-    monto: tarifas.comisionMunicipal,
-    descripcion: `Comisión municipal efectivo - Patente ${patenteUpper} (${tipoVehiculo})`,
+    monto: tarifas.comisionMunicipalEfectivo,
+    descripcion: `Comisión municipal 20% efectivo - Patente ${patenteUpper} (${tipoVehiculo})`,
   });
 
   return { sesion: sesion as SesionEstacionamiento };

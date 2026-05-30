@@ -134,20 +134,7 @@ CREATE TRIGGER trg_transacciones_saldo
   AFTER INSERT ON transacciones
   FOR EACH ROW EXECUTE FUNCTION actualizar_saldo_permisionario();
 
--- Función helper: obtener tarifa con descuento digital
-CREATE OR REPLACE FUNCTION obtener_tarifa_digital(p_tipo tipo_vehiculo)
-RETURNS NUMERIC(12,2) AS $$
-BEGIN
-  IF p_tipo = 'auto' THEN
-    RETURN 560.00; -- 80% de 700 (descuento 20%)
-  ELSIF p_tipo = 'moto' THEN
-    RETURN 240.00; -- 80% de 300 (descuento 20%)
-  END IF;
-  RETURN 0;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- Función helper: obtener tarifa base
+-- Función helper: obtener tarifa base (lo que paga el conductor, siempre tarifa completa)
 CREATE OR REPLACE FUNCTION obtener_tarifa_base(p_tipo tipo_vehiculo)
 RETURNS NUMERIC(12,2) AS $$
 BEGIN
@@ -160,14 +147,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
--- Función helper: comisión municipal (20% de tarifa base)
-CREATE OR REPLACE FUNCTION obtener_comision_municipal(p_tipo tipo_vehiculo)
+-- Función helper: comisión municipal por pago efectivo (20% de la tarifa base)
+-- Pago digital: 0% comisión (incentivo para permisionario)
+CREATE OR REPLACE FUNCTION obtener_comision_efectivo(p_tipo tipo_vehiculo)
 RETURNS NUMERIC(12,2) AS $$
 BEGIN
   IF p_tipo = 'auto' THEN
-    RETURN 140.00; -- 20% de 700
+    RETURN 140.00;
   ELSIF p_tipo = 'moto' THEN
-    RETURN 60.00; -- 20% de 300
+    RETURN 60.00;
   END IF;
   RETURN 0;
 END;

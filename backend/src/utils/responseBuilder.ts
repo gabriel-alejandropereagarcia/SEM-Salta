@@ -2,15 +2,16 @@ import { SesionEstacionamiento, FareResult } from '../types';
 import { obtenerTarifas } from '../services/fare.service';
 
 export function formatEstacionarSuccess(sesion: SesionEstacionamiento, cuc: string): string {
-  const horaFin = new Date(sesion.hora_fin!);
   const horaInicio = new Date(sesion.hora_inicio);
+  const horaFin = new Date(sesion.hora_fin!);
+  const horaInicioStr = horaInicio.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   const horaFinStr = horaFin.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   return [
     `✅ *Estacionamiento iniciado*`,
     `🚗 Patente: ${sesion.patente}`,
     `📍 Zona: ${cuc}`,
-    `🕐 Hasta: ${horaFinStr}`,
-    `📱 Pago digital - 20% descuento aplicado`,
+    `🕐 ${horaInicioStr} → ${horaFinStr}`,
+    `📱 Pago digital registrado`,
     ``,
     `Escribí *FIN* cuando quieras terminar.`,
   ].join('\n');
@@ -48,12 +49,18 @@ export function formatTarifas(): string {
     `📋 *Tarifas SEM Salta*`,
     ``,
     `🚗 *Auto*`,
-    `  Tarifa base: $${tarifas.auto.base}/h`,
-    `  Tarifa digital: $${tarifas.auto.digital}/h (${tarifas.auto.descuento})`,
+    `  Tarifa: $${tarifas.auto.base}/h`,
+    `  Pago efectivo: comisión municipal $140/h`,
+    `  Pago digital: sin comisión para permisionario ✅`,
     ``,
     `🏍 *Moto*`,
-    `  Tarifa base: $${tarifas.moto.base}/h`,
-    `  Tarifa digital: $${tarifas.moto.digital}/h (${tarifas.moto.descuento})`,
+    `  Tarifa: $${tarifas.moto.base}/h`,
+    `  Pago efectivo: comisión municipal $60/h`,
+    `  Pago digital: sin comisión para permisionario ✅`,
+    ``,
+    `💡 *El conductor siempre paga la tarifa completa.*`,
+    `💡 *El incentivo digital es para el permisionario*`,
+    `   (no paga comisión municipal con pago digital)`,
     ``,
     `Fraccionamiento: cada 15 min (desde 2da hora)`,
     `Tolerancia: 5 min`,
@@ -96,16 +103,16 @@ export function formatWelcome(): string {
   return [
     `👋 *Bienvenido al SEM Salta Digital*`,
     ``,
-    `Estacionamiento medido más fácil, rápido y con descuento.`,
+    `Estacionamiento medido más fácil y rápido.`,
     ``,
     `🚗 *¿Cómo funciona?*`,
     `1️⃣ Recargá saldo: *RECARGAR 5000*`,
     `2️⃣ Estacioná: *ESTACIONAR A12 ABC123D*`,
     `3️⃣ Cuando te vayas: *FIN*`,
     ``,
-    `📱 *Pagando digitalmente tenés 20% de descuento*`,
-    `🚗 Auto: $560/h en vez de $700/h`,
-    `🏍 Moto: $240/h en vez de $300/h`,
+    `📋 *Tarifas*`,
+    `🚗 Auto: $700/h | 🏍 Moto: $300/h`,
+    `(El conductor siempre paga tarifa completa)`,
     ``,
     `Escribí *AYUDA* para ver todos los comandos.`,
   ].join('\n');
@@ -125,6 +132,6 @@ export function formatActiveSession(sesion: SesionEstacionamiento, cuc: string):
     `📋 *Sesión activa*`,
     `${tipoEmoji} ${sesion.patente} en zona ${cuc}`,
     `🕐 ${horaInicio} → ${horaFin}`,
-    `📱 ${sesion.metodo_pago === 'digital' ? 'Digital (con descuento)' : 'Efectivo'}`,
+    `📱 ${sesion.metodo_pago === 'digital' ? 'Digital' : 'Efectivo'}`,
   ].join('\n');
 }

@@ -15,12 +15,11 @@ export function calcularCostoEstacionamiento(
   if (diffMin <= 0) {
     return {
       tarifaBase: tarifas.base,
-      tarifaDigital: tarifas.digital,
-      comisionMunicipal: tarifas.comisionMunicipal,
-      gananciaPermisionario: tarifas.permisionario,
+      costoFinal: tarifas.base,
+      comisionMunicipalEfectivo: tarifas.comisionMunicipalEfectivo,
+      gananciaPermisionarioDigital: tarifas.base,
       horas: 0,
       minutosExcedentes: 0,
-      costoFinal: tarifas.digital,
     };
   }
 
@@ -28,54 +27,48 @@ export function calcularCostoEstacionamiento(
   const minutosRestantes = diffMin % 60;
 
   let costoFinal: number;
-  let horasFacturar: number;
   let minutosExcedentes: number;
 
-  if (horasCompletas <= 1) {
-    horasFacturar = 1;
+  if (horasCompletas < 1) {
+    costoFinal = tarifas.base;
     minutosExcedentes = 0;
-    costoFinal = tarifas.digital;
   } else {
-    horasFacturar = horasCompletas;
+    costoFinal = horasCompletas * tarifas.base;
 
     if (minutosRestantes > fare.toleranciaMinutos) {
       const fracciones15min = Math.ceil(minutosRestantes / fare.fraccionamientoMinutos);
       minutosExcedentes = fracciones15min * fare.fraccionamientoMinutos;
+      costoFinal += (minutosExcedentes / 60) * tarifas.base;
     } else {
       minutosExcedentes = 0;
     }
-
-    costoFinal = (horasFacturar * tarifas.digital) + (minutosExcedentes / 60) * tarifas.digital;
   }
-
-  const gananciaPermisionario = costoFinal;
 
   return {
     tarifaBase: tarifas.base,
-    tarifaDigital: tarifas.digital,
-    comisionMunicipal: tarifas.comisionMunicipal,
-    gananciaPermisionario: Math.round(gananciaPermisionario * 100) / 100,
+    costoFinal: Math.round(costoFinal * 100) / 100,
+    comisionMunicipalEfectivo: tarifas.comisionMunicipalEfectivo * Math.ceil(costoFinal / tarifas.base),
+    gananciaPermisionarioDigital: Math.round(costoFinal * 100) / 100,
     horas: horasCompletas,
     minutosExcedentes,
-    costoFinal: Math.round(costoFinal * 100) / 100,
   };
 }
 
 export function calcularCostoMinimo(tipoVehiculo: TipoVehiculo): number {
-  return fare[tipoVehiculo].digital;
+  return fare[tipoVehiculo].base;
 }
 
-export function obtenerTarifas(): Record<string, { base: number; digital: number; descuento: string }> {
+export function obtenerTarifas(): Record<string, { base: number; comisionEfectivo: number; incentivoDigital: string }> {
   return {
     auto: {
       base: fare.auto.base,
-      digital: fare.auto.digital,
-      descuento: '20% de descuento digital',
+      comisionEfectivo: fare.auto.comisionMunicipalEfectivo,
+      incentivoDigital: 'Sin comisión municipal (permisionario keep 100%)',
     },
     moto: {
       base: fare.moto.base,
-      digital: fare.moto.digital,
-      descuento: '20% de descuento digital',
+      comisionEfectivo: fare.moto.comisionMunicipalEfectivo,
+      incentivoDigital: 'Sin comisión municipal (permisionario keep 100%)',
     },
   };
 }

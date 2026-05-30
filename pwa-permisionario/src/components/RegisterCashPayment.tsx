@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { TipoVehiculo } from '@/types';
 
 interface RegisterCashPaymentProps {
@@ -56,6 +55,9 @@ export function RegisterCashPayment({ zonaCuc, permisionarioId, onSuccess }: Reg
       <p className="text-sm text-gray-500 mb-3">
         Zona: <span className="font-medium">{zonaCuc}</span>
       </p>
+      <p className="text-xs text-gray-400 mb-3 bg-yellow-50 p-2 rounded">
+        ⚠️ El conductor paga tarifa completa. Se descuenta comisión municipal (20%) de tu cuenta corriente.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
@@ -87,7 +89,7 @@ export function RegisterCashPayment({ zonaCuc, permisionarioId, onSuccess }: Reg
                   : 'bg-gray-50 border-gray-200 text-gray-600'
               }`}
             >
-              🚗 Auto ($140)
+              🚗 Auto (-$140)
             </button>
             <button
               type="button"
@@ -98,11 +100,11 @@ export function RegisterCashPayment({ zonaCuc, permisionarioId, onSuccess }: Reg
                   : 'bg-gray-50 border-gray-200 text-gray-600'
               }`}
             >
-              🏍 Moto ($60)
+              🏍 Moto (-$60)
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Comision municipal: 20% de la tarifa base
+            Comisión municipal: 20% de la tarifa base (solo efectivo)
           </p>
         </div>
 
@@ -121,3 +123,5 @@ export function RegisterCashPayment({ zonaCuc, permisionarioId, onSuccess }: Reg
     </div>
   );
 }
+
+import { useState } from 'react';
