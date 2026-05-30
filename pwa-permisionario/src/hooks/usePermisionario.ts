@@ -44,7 +44,7 @@ export function usePermisionario() {
     if (error || !data) return false;
 
     setPermisionario(data as Permisionario);
-    localStorage.setItem(PERMISIONARIO_KEY, data.id);
+    localStorage.setItem(PERMISIONARIO_KEY, (data as Permisionario).id);
     return true;
   }
 
@@ -62,8 +62,9 @@ export function usePermisionario() {
       .single();
 
     if (data) {
+      const saldo = (data as { saldo_cuenta_corriente: number }).saldo_cuenta_corriente;
       setPermisionario((prev) =>
-        prev ? { ...prev, saldo_cuenta_corriente: data.saldo_cuenta_corriente } : null
+        prev ? { ...prev, saldo_cuenta_corriente: saldo } : null
       );
     }
   }
